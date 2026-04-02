@@ -38,10 +38,14 @@
   select, input[type="text"] { width: 100%; padding: 10px; border: 1.5px solid var(--gray-100); border-radius: 8px; font-size: 14px; outline: none; }
   
   .student-list { margin-top: 10px; border: 1px solid var(--gray-100); border-radius: 8px; overflow: hidden; }
+  
+  /* FILAS CLICKEABLES */
   .student-row { display: grid; grid-template-columns: 40px 2fr 1fr 1fr 1fr; gap: 10px; padding: 12px 15px; border-bottom: 1px solid var(--gray-100); align-items: center; cursor: pointer; transition: background 0.2s; }
   .student-row:hover { background-color: var(--blue-50); }
   .student-header { background-color: var(--blue-800); color: white; font-weight: bold; font-size: 12px; cursor: default; }
+  .student-header:hover { background-color: var(--blue-800); }
   
+  /* CHECKBOX */
   .checkbox-wrapper { display: flex; justify-content: center; }
   input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: var(--green-600); }
   
@@ -50,6 +54,7 @@
   .badge.f { background-color: #FDE8EF; color: #9D234C; }
 
   .btn-action { font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid var(--gray-100); background: white; }
+  
   .btn-generate { background-color: var(--green-600); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; text-transform: uppercase; margin-bottom: 10px;}
   .btn-generate:disabled { background-color: var(--gray-400); cursor: not-allowed; }
 
@@ -61,16 +66,32 @@
   .modal { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
 
   /* LOGO CENTRADO WEB */
-  .web-logo-container { text-align: center; margin-bottom: 15px; }
-  .web-logo { width: 200px; height: auto; }
+  .web-logo-container { text-align: center; margin: 20px 0; }
+  .web-logo { width: 250px; height: auto; display: inline-block; }
 
+  /* PANTALLA DE MANTENIMIENTO */
+  #pantalla-mantenimiento {
+    display: none; position: fixed; inset: 0; background-color: rgba(250, 250, 250, 0.98); 
+    z-index: 99999; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  }
+
+  /* CONTENEDOR PDF OCULTO */
   #pdf-container { display: none; }
 </style>
 </head>
 <body>
 
+<div id="pantalla-mantenimiento">
+  <span style="font-size: 100px; cursor: pointer; user-select: none;" ondblclick="toggleMantenimiento()" title="Doble clic para desbloquear">⚠️</span>
+  <h1 style="color: #E24B4A; font-size: 45px; margin-top: 20px; font-family: 'Arial Black', sans-serif;">SITIO EN MANTENIMIENTO</h1>
+  <p style="color: #2C2C2A; font-size: 24px; font-weight: bold; margin-top: 10px;">POR FAVOR NO UTILIZAR</p>
+</div>
+
 <div class="header">
-  <img src="logo.jpg" alt="Logo C.E." class="header-logo" onerror="this.style.display='none'"> 
+  <div style="display: flex; align-items: center;">
+    <img src="logo.jpg" alt="Logo" class="header-logo" onerror="this.style.display='none'"> 
+    <button ondblclick="toggleMantenimiento()" style="width: 30px; height: 50px; background-color: var(--blue-800); border: none; outline: none; cursor: default; margin-left: 5px;"></button>
+  </div>
   <div class="header-titles">
     <h1>Sistema de Control de Asistencia</h1>
     <p>Centro Escolar Cantón El Ojusthe - 80045</p>
@@ -83,6 +104,7 @@
 </div>
 
 <div class="container">
+  
   <div id="view-docente" class="view-section view-active">
     <div class="panel">
       <div class="filters">
@@ -142,6 +164,7 @@
   <div id="view-subdireccion" class="view-section">
     <div class="panel">
       <h2 style="color: var(--blue-800); margin-bottom: 10px;">Resumen (Sub-Dirección)</h2>
+      
       <div id="sub-lista-reportes">
         <div style="padding: 20px; text-align: center;">Cargando reportes...</div>
       </div>
@@ -176,7 +199,7 @@
 </div>
 
 <div id="pdf-container">
-  <div id="pdf-content" style="width: 800px; padding: 40px; font-family: Arial, sans-serif; color: black; background: white;">
+  <div id="pdf-content" style="padding: 40px; font-family: Arial, sans-serif; color: black; background: white; width: 100%; box-sizing: border-box; position: relative; min-height: 1000px;">
   </div>
 </div>
 
@@ -187,8 +210,36 @@ let baseDatosAlumnos = [];
 let alumnosFiltrados = [];
 let estadoSeleccion = true;
 
-function pedirPasswordSub() { if (prompt("Ingrese contraseña de Sub-Dirección:") === "1234") { cambiarVista('subdireccion'); } else { alert("Contraseña incorrecta."); } }
-function pedirPasswordNuevo() { if (prompt("Ingrese contraseña de Administrador:") === "1234") { document.getElementById('modal-alumno').classList.add('open'); } else { alert("Contraseña incorrecta."); } }
+// --- BOTÓN SECRETO DE MANTENIMIENTO ---
+function toggleMantenimiento() {
+  const pantalla = document.getElementById('pantalla-mantenimiento');
+  if (localStorage.getItem('mantenimiento_activo') === 'true') {
+    localStorage.setItem('mantenimiento_activo', 'false');
+    pantalla.style.display = 'none';
+  } else {
+    localStorage.setItem('mantenimiento_activo', 'true');
+    pantalla.style.display = 'flex';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem('mantenimiento_activo') === 'true') {
+    document.getElementById('pantalla-mantenimiento').style.display = 'flex';
+  }
+});
+
+// --- SEGURIDAD Y VISTAS ---
+function pedirPasswordSub() {
+  if (prompt("Ingrese contraseña de Sub-Dirección:") === "1234") {
+    cambiarVista('subdireccion');
+  } else { alert("Contraseña incorrecta."); }
+}
+
+function pedirPasswordNuevo() { 
+  if (prompt("Ingrese contraseña de Administrador:") === "1234") {
+    document.getElementById('modal-alumno').classList.add('open');
+  } else { alert("Contraseña incorrecta."); }
+}
 
 function cambiarVista(vista) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('view-active'));
@@ -202,6 +253,7 @@ function cambiarVista(vista) {
     }
 }
 
+// --- CONEXIÓN A LA NUBE ---
 async function inicializarBaseDatos() {
   const cont = document.getElementById('tabla-alumnos');
   cont.innerHTML = '<div style="padding: 20px; text-align: center; color: #185FA5; font-weight:bold;">Sincronizando con la nube...</div>';
@@ -211,10 +263,13 @@ async function inicializarBaseDatos() {
     baseDatosAlumnos = await response.json();
     baseDatosAlumnos.sort((a, b) => a.nombre.localeCompare(b.nombre));
     cargarAlumnos();
-  } catch (error) { cont.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">Error de conexión.</div>'; }
+  } catch (error) {
+    cont.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">Error de conexión. Verifica la URL de Google Script.</div>';
+  }
 }
 window.onload = inicializarBaseDatos;
 
+// --- VISTA SUB-DIRECCIÓN ---
 async function cargarReportesSub() {
     const container = document.getElementById('sub-lista-reportes');
     container.innerHTML = "Sincronizando reportes...";
@@ -225,56 +280,93 @@ async function cargarReportesSub() {
         
         let html = `<table class="sub-table">
                       <tr style="background-color: var(--blue-800); color: white;">
-                        <th>Fecha</th><th>Grado/Secc</th><th>Docente</th><th style="text-align:center;">M</th><th style="text-align:center;">F</th><th style="text-align:center;">Ausentes</th><th style="text-align:center;">Total Asist.</th>
+                        <th>Fecha</th>
+                        <th>Grado/Seccc</th>
+                        <th>Docente</th>
+                        <th style="text-align:center;">M</th>
+                        <th style="text-align:center;">F</th>
+                        <th style="text-align:center;">Ausentes</th>
+                        <th style="text-align:center;">Total Asist.</th>
                       </tr>`;
+                      
         reportes.reverse().slice(0, 20).forEach(r => {
             const fechaFormateada = new Date(r.fecha).toLocaleDateString('es-ES');
-            html += `<tr><td>${fechaFormateada}</td><td>${r.grado} ${r.seccion}</td><td style="font-size: 11px;">${r.docente}</td><td style="text-align:center;">${r.m || 0}</td><td style="text-align:center;">${r.f || 0}</td><td style="text-align:center; font-weight:bold; color:#E24B4A;">${r.ausentes || 0}</td><td style="text-align:center; font-weight:bold; color:#1D9E75;">${r.presentes || 0}</td></tr>`;
+            html += `<tr>
+                        <td>${fechaFormateada}</td>
+                        <td>${r.grado} ${r.seccion}</td>
+                        <td style="font-size: 11px;">${r.docente}</td>
+                        <td style="text-align:center;">${r.m || 0}</td>
+                        <td style="text-align:center;">${r.f || 0}</td>
+                        <td style="text-align:center; font-weight:bold; color:#E24B4A;">${r.ausentes || 0}</td>
+                        <td style="text-align:center; font-weight:bold; color:#1D9E75;">${r.presentes || 0}</td>
+                     </tr>`;
         });
         html += `</table>`;
         container.innerHTML = html;
     } catch (e) { container.innerHTML = "Error al cargar reportes."; }
 }
 
+// --- LÓGICA DE TABLA DE ALUMNOS ---
 function cargarAlumnos() {
   const grado = document.getElementById('grado-select').value;
   const seccion = document.getElementById('seccion-select').value;
   const contenedor = document.getElementById('tabla-alumnos');
-  if (!grado || !seccion) { contenedor.innerHTML = '<div style="padding: 20px; text-align: center; color: #5F5E5A;">Seleccione un grado y una sección.</div>'; alumnosFiltrados = []; return; }
+  
+  if (!grado || !seccion) {
+    contenedor.innerHTML = '<div style="padding: 20px; text-align: center; color: #5F5E5A;">Seleccione un grado y una sección.</div>';
+    alumnosFiltrados = []; return;
+  }
   alumnosFiltrados = baseDatosAlumnos.filter(a => a.grado === grado && a.seccion === seccion);
-  if (alumnosFiltrados.length === 0) { contenedor.innerHTML = '<div style="padding: 20px; text-align: center; color: #E24B4A;">No hay alumnos en este grado.</div>'; return; }
+  if (alumnosFiltrados.length === 0) {
+    contenedor.innerHTML = '<div style="padding: 20px; text-align: center; color: #E24B4A;">No hay alumnos en este grado.</div>'; return;
+  }
 
   let html = `<div class="student-row student-header"><div class="checkbox-wrapper">✓</div><div>Nombre del Estudiante</div><div>Sexo</div><div>NIE</div><div>Teléfono</div></div>`;
   alumnosFiltrados.forEach((alumno, index) => {
     html += `
       <div class="student-row" onclick="toggleFila(event, ${index})">
-        <div class="checkbox-wrapper"><input type="checkbox" id="chk-${index}" value="${index}" checked></div>
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="chk-${index}" value="${index}" checked>
+        </div>
         <div style="font-weight: 500; font-size:13px;">${alumno.nombre}</div>
         <div><span class="badge ${alumno.sexo.toLowerCase()}">${alumno.sexo}</span></div>
         <div style="font-size: 13px;">${alumno.nie}</div>
-        <div style="font-size: 13px;">${alumno.telefono}</div>
+        <div style="font-size: 13px;">${alumno.telefono || 'N/A'}</div>
       </div>`;
   });
   contenedor.innerHTML = html;
   estadoSeleccion = true; 
 }
 
-function toggleFila(event, index) { if(event.target.tagName.toLowerCase() === 'input') return; document.getElementById(`chk-${index}`).checked = !document.getElementById(`chk-${index}`).checked; }
-function toggleTodos() { estadoSeleccion = !estadoSeleccion; alumnosFiltrados.forEach((a, i) => document.getElementById(`chk-${i}`).checked = estadoSeleccion); }
+function toggleFila(event, index) {
+  if(event.target.tagName.toLowerCase() === 'input') return; 
+  const chk = document.getElementById(`chk-${index}`);
+  chk.checked = !chk.checked;
+}
+
+function toggleTodos() {
+  estadoSeleccion = !estadoSeleccion;
+  alumnosFiltrados.forEach((a, i) => {
+    document.getElementById(`chk-${i}`).checked = estadoSeleccion;
+  });
+}
 
 async function borrarReportes() {
   const rango = document.getElementById('delete-rango').value;
   let mensaje = rango === "hoy" ? "¿Estás seguro que deseas borrar todos los reportes generados HOY?" : "⚠️ PELIGRO EXTREMO: ¿Estás seguro que deseas borrar TODO EL HISTORIAL de reportes?";
   if(!confirm(mensaje + "\nEsta acción borrará los datos de tu Google Sheets y no se puede deshacer.")) return;
+
   const btn = document.getElementById('btn-delete-reportes');
   btn.disabled = true; btn.innerText = "⏳ Borrando...";
+  const fechaHoy = new Date().toLocaleDateString('es-ES');
+
   try {
-    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ tipo_post: "delete_reportes", rango: rango, fecha: new Date().toLocaleDateString('es-ES') }) });
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ tipo_post: "delete_reportes", rango: rango, fecha: fechaHoy }) });
     setTimeout(() => { alert("✅ Orden de borrado enviada a la nube."); cargarReportesSub(); btn.disabled = false; btn.innerText = "🗑️ Ejecutar Borrado"; }, 1500);
   } catch(e) { alert("❌ Error de red al intentar borrar."); btn.disabled = false; btn.innerText = "🗑️ Ejecutar Borrado"; }
 }
 
-// --- GENERADOR DE PDF ---
+// --- GENERADOR DE PDF EXACTAMENTE IGUAL A LA VERSIÓN ORIGINAL (SIN ERROR) ---
 async function generarPDF() {
   const docente = document.getElementById('docente-nombre').value.trim();
   const grado = document.getElementById('grado-select').value;
@@ -290,8 +382,9 @@ async function generarPDF() {
 
   const presentes = []; const ausentes = []; let masc = 0, fem = 0;
   alumnosFiltrados.forEach((alumno, index) => {
-    if (document.getElementById(`chk-${index}`).checked) { presentes.push(alumno); alumno.sexo === 'M' ? masc++ : fem++; } 
-    else { ausentes.push(alumno); }
+    if (document.getElementById(`chk-${index}`).checked) {
+      presentes.push(alumno); alumno.sexo === 'M' ? masc++ : fem++;
+    } else { ausentes.push(alumno); }
   });
 
   const ahora = new Date();
@@ -301,94 +394,109 @@ async function generarPDF() {
 
   fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ tipo_post: "asistencia", fecha: ahora, grado: grado, seccion: seccion, docente: docente, presentes: presentes.length, ausentes: ausentes.length, m: masc, f: fem }) }).catch(e => console.log("Enviado"));
 
-  // ESTRUCTURA CORREGIDA DEL PDF
   const pdfHtml = `
-    <div style="width: 100%; height: 1000px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-      <h1 style="color: #0C447C; font-size: 26px; margin-bottom: 10px; text-transform: uppercase;">Ministerio de Educación, Ciencia y Tecnología</h1>
-      <h2 style="color: #2C2C2A; font-size: 22px; margin-bottom: 50px; text-transform: uppercase;">Centro Escolar Cantón El Ojusthe - 80045</h2>
-      
-      <div style="border: 2px solid #0C447C; padding: 40px; border-radius: 15px; width: 80%; background-color: white;">
-        <h3 style="font-size: 24px; color: #185FA5; margin-bottom: 30px; text-transform: uppercase; border-bottom: 2px solid #185FA5; padding-bottom: 10px;">Registro de Asistencia Diario</h3>
-        <div style="text-align: left; padding-left: 20px;">
-          <p style="font-size: 18px; margin: 15px 0;"><strong>Grado:</strong> ${grado} &nbsp; <strong>Sección:</strong> ${seccion}</p>
-          <p style="font-size: 18px; margin: 15px 0;"><strong>Docente Responsable:</strong> ${docente}</p>
-          <p style="font-size: 18px; margin: 15px 0;"><strong>Fecha:</strong> ${fechaStr}</p>
+    <div style="position: relative; background: white; padding: 0;">
+      <div style="position: relative; z-index: 10; padding: 40px;">
+        <div style="text-align: center; padding-top: 100px; padding-bottom: 200px;">
+          <h1 style="color: #0C447C; font-size: 26px; margin-bottom: 10px; text-transform: uppercase;">Ministerio de Educación, Ciencia y Tecnología</h1>
+          <h2 style="color: #2C2C2A; font-size: 22px; margin-bottom: 50px; text-transform: uppercase;">Centro Escolar Cantón El Ojusthe - 80045</h2>
+          <div style="border: 2px solid #0C447C; padding: 40px; border-radius: 15px; background-color: transparent; width: 80%; margin: 0 auto;">
+            <h3 style="font-size: 24px; color: #185FA5; margin-bottom: 30px; text-transform: uppercase; border-bottom: 2px solid #185FA5; padding-bottom: 10px;">Registro de Asistencia Diario</h3>
+            <div style="text-align: left; padding-left: 20px;">
+              <p style="font-size: 18px; margin: 15px 0;"><strong>Grado:</strong> ${grado} &nbsp; <strong>Sección:</strong> ${seccion}</p>
+              <p style="font-size: 18px; margin: 15px 0;"><strong>Docente Responsable:</strong> ${docente}</p>
+              <p style="font-size: 18px; margin: 15px 0;"><strong>Fecha:</strong> ${fechaStr}</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="html2pdf__page-break"></div>
+        <div class="html2pdf__page-break"></div>
 
-    <div style="width: 100%; padding-top: 30px;">
-      <div style="text-align: center; border-bottom: 3px solid #0C447C; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="font-size: 18px; color: #0C447C; margin-bottom: 5px;">MINISTERIO DE EDUCACIÓN CIENCIA Y TECNOLOGÍA</h2>
-        <h3 style="font-size: 16px; color: #2C2C2A; margin-bottom: 5px;">CENTRO ESCOLAR CANTÓN EL OJUSTHE - 80045</h3>
-      </div>
-      
-      <div style="margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 14px;">
-        <p><strong>Grado:</strong> ${grado} <strong>Seccion:</strong> ${seccion}</p>
-        <p><strong>Docente:</strong> ${docente} <strong>Fecha:</strong> ${fechaStr}</p>
-      </div>
-      
-      <div style="background-color: #F0F2F5; border: 1px solid #B5D4F4; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
-        <p><strong>Asistencias: ${presentes.length}</strong> | M: <strong>${masc}</strong> | F: <strong>${fem}</strong> | Ausencias: ${ausentes.length}</p>
-      </div>
+        <div style="text-align: center; border-bottom: 3px solid #0C447C; padding-bottom: 15px; margin-bottom: 20px;">
+          <h2 style="font-size: 18px; color: #0C447C; margin-bottom: 5px;">MINISTERIO DE EDUCACIÓN CIENCIA Y TECNOLOGÍA</h2>
+          <h3 style="font-size: 16px; color: #2C2C2A; margin-bottom: 5px;">CENTRO ESCOLAR CANTÓN EL OJUSTHE - 80045</h3>
+        </div>
+        
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; font-size: 14px;">
+          <p><strong>Grado:</strong> ${grado} <strong>Seccion:</strong> ${seccion}</p>
+          <p><strong>Docente:</strong> ${docente} <strong>Fecha:</strong> ${fechaStr}</p>
+        </div>
+        
+        <div style="background-color: transparent; border: 1px solid #B5D4F4; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+          <p><strong>Asistencias: ${presentes.length}</strong> | M: <strong>${masc}</strong> | F: <strong>${fem}</strong> | Ausencias: ${ausentes.length}</p>
+        </div>
 
-      <h4 style="color: #1D9E75; border-bottom: 2px solid #1D9E75; padding-bottom: 5px; margin-bottom: 10px; font-size: 15px; page-break-after: avoid;">ESTUDIANTES PRESENTES</h4>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 13px; page-break-inside: auto;">
-        <colgroup><col style="width: 8%;"><col style="width: 45%;"><col style="width: 10%;"><col style="width: 17%;"><col style="width: 20%;"></colgroup>
-        ${presentes.length > 0 ? presentes.map(a => `
-          <tr style="page-break-inside: avoid; page-break-after: auto;">
-            <td style="border: 1px solid #ddd; padding: 6px; text-align: center; color: #1D9E75; font-weight: bold;">✓</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.nombre}</td>
-            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${a.sexo}</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.nie}</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.telefono}</td>
-          </tr>
-        `).join('') : `<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">Ninguno</td></tr>`}
-      </table>
+        <h4 style="color: #1D9E75; border-bottom: 2px solid #1D9E75; padding-bottom: 5px; margin-bottom: 10px; font-size: 15px; page-break-after: avoid;">ESTUDIANTES PRESENTES</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 13px; page-break-before: auto;">
+          <colgroup><col style="width: 8%;"><col style="width: 45%;"><col style="width: 10%;"><col style="width: 17%;"><col style="width: 20%;"></colgroup>
+          ${presentes.length > 0 ? presentes.map(a => `
+            <tr style="page-break-inside: avoid;">
+              <td style="border: 1px solid #ddd; padding: 6px; text-align: center; color: #1D9E75; font-weight: bold;">✓</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.nombre}</td>
+              <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${a.sexo}</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.nie}</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.telefono || 'N/A'}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">Ninguno</td></tr>`}
+        </table>
 
-      <h4 style="color: #E24B4A; border-bottom: 2px solid #E24B4A; padding-bottom: 5px; margin-bottom: 10px; font-size: 15px; page-break-after: avoid;">ESTUDIANTES AUSENTES</h4>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px; page-break-inside: auto;">
-        <colgroup><col style="width: 8%;"><col style="width: 45%;"><col style="width: 10%;"><col style="width: 17%;"><col style="width: 20%;"></colgroup>
-        ${ausentes.length > 0 ? ausentes.map(a => `
-          <tr style="page-break-inside: avoid; page-break-after: auto;">
-            <td style="border: 1px solid #ddd; padding: 6px; text-align: center; color: #E24B4A; font-weight: bold;">✗</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.nombre}</td>
-            <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${a.sexo}</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.nie}</td>
-            <td style="border: 1px solid #ddd; padding: 6px;">${a.telefono}</td>
-          </tr>
-        `).join('') : `<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">Ninguno</td></tr>`}
-      </table>
+        <h4 style="color: #E24B4A; border-bottom: 2px solid #E24B4A; padding-bottom: 5px; margin-bottom: 10px; font-size: 15px; page-break-after: avoid;">ESTUDIANTES AUSENTES</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px; page-break-before: auto;">
+          <colgroup><col style="width: 8%;"><col style="width: 45%;"><col style="width: 10%;"><col style="width: 17%;"><col style="width: 20%;"></colgroup>
+          ${ausentes.length > 0 ? ausentes.map(a => `
+            <tr style="page-break-inside: avoid;">
+              <td style="border: 1px solid #ddd; padding: 6px; text-align: center; color: #E24B4A; font-weight: bold;">✗</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.nombre}</td>
+              <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">${a.sexo}</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.nie}</td>
+              <td style="border: 1px solid #ddd; padding: 6px;">${a.telefono || 'N/A'}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">Ninguno</td></tr>`}
+        </table>
+      </div>
     </div>
   `;
 
-  document.getElementById('pdf-content').innerHTML = pdfHtml;
+  const container = document.getElementById('pdf-content');
+  container.innerHTML = pdfHtml;
+
+  const nombreArchivo = `Asistencia ${grado} ${secLimpia} - ${fechaArchivo} - ${docente}.pdf`;
 
   const opt = {
-    margin: [10, 10, 10, 10], // Márgenes más cerrados para que quepa bien
-    filename: `Asistencia_${grado}_${fechaArchivo}.pdf`,
+    margin: 15,
+    filename: nombreArchivo,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: true }, // Mejor renderizado de texto
+    html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'letter', orientation: orientacion },
     pagebreak: { mode: ['css', 'legacy'] } 
   };
 
   try {
     window.scrollTo(0, 0);
-    await html2pdf().set(opt).from(document.getElementById('pdf-content')).save();
+    await html2pdf().set(opt).from(container).save();
   } catch (error) { alert("❌ Error al generar PDF."); } 
   finally { btn.disabled = false; btn.innerText = "📥 Generar PDF y Guardar Reporte"; }
 }
 
 function cerrarModal() { document.getElementById('modal-alumno').classList.remove('open'); }
+
 async function guardarAlumno() {
   const b = document.getElementById('btn-save-cloud');
-  const n = { tipo_post: "alumno", grado: document.getElementById('grado-select').value, seccion: document.getElementById('seccion-select').value, nombre: document.getElementById('new-nombre').value, sexo: document.getElementById('new-sexo').value, nie: document.getElementById('new-nie').value, telefono: document.getElementById('new-telefono').value };
+  const n = { 
+    tipo_post: "alumno", grado: document.getElementById('grado-select').value,
+    seccion: document.getElementById('seccion-select').value, nombre: document.getElementById('new-nombre').value,
+    sexo: document.getElementById('new-sexo').value, nie: document.getElementById('new-nie').value,
+    telefono: document.getElementById('new-telefono').value
+  };
   if(!n.nombre || !n.grado) return alert("Faltan datos");
+  
   b.disabled = true; b.innerText = "Subiendo...";
-  try { await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(n) }); alert("Guardado exitoso en la nube."); cerrarModal(); setTimeout(inicializarBaseDatos, 1000); } catch(e) { alert("Error al guardar"); }
+  try {
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(n) });
+    alert("Guardado exitoso en la nube.");
+    cerrarModal(); 
+    setTimeout(inicializarBaseDatos, 1000);
+  } catch(e) { alert("Error al guardar"); }
   b.disabled = false; b.innerText = "Guardar";
 }
 </script>
