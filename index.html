@@ -87,7 +87,7 @@
   <p style="color: #2C2C2A; font-size: 24px; font-weight: bold; margin-top: 10px;">POR FAVOR NO UTILIZAR</p>
 </div>
 
-<div class="header">
+<div class="header" id="header-principal">
   <div style="display: flex; align-items: center;">
     <img src="logo.jpg" alt="Logo" class="header-logo" onerror="this.style.display='none'"> 
     <button ondblclick="toggleMantenimiento()" style="width: 30px; height: 50px; background-color: var(--blue-800); border: none; outline: none; cursor: default; margin-left: 5px;"></button>
@@ -103,7 +103,7 @@
   </div>
 </div>
 
-<div class="container">
+<div class="container" id="container-principal">
   
   <div id="view-docente" class="view-section view-active">
     <div class="panel">
@@ -211,22 +211,54 @@ let baseDatosAlumnos = [];
 let alumnosFiltrados = [];
 let estadoSeleccion = true;
 
-// --- BOTÓN SECRETO DE MANTENIMIENTO ---
-function toggleMantenimiento() {
+// --- SISTEMA DE MANTENIMIENTO GLOBAL (CONTROLADO POR SERVIDOR) ---
+
+function aplicarEstadoMantenimiento(activo) {
   const pantalla = document.getElementById('pantalla-mantenimiento');
-  if (localStorage.getItem('mantenimiento_activo') === 'true') {
-    localStorage.setItem('mantenimiento_activo', 'false');
-    pantalla.style.display = 'none';
-  } else {
-    localStorage.setItem('mantenimiento_activo', 'true');
+  const cabecera = document.getElementById('header-principal');
+  const contenido = document.getElementById('container-principal');
+  if (activo) {
     pantalla.style.display = 'flex';
+    cabecera.style.display = 'none';
+    contenido.style.display = 'none';
+  } else {
+    pantalla.style.display = 'none';
+    cabecera.style.display = 'flex';
+    contenido.style.display = 'block';
+  }
+}
+
+async function verificarMantenimiento() {
+  try {
+    const res = await fetch(SCRIPT_URL + "?tipo=check_mantenimiento");
+    const data = await res.json();
+    aplicarEstadoMantenimiento(data.mantenimiento === true);
+  } catch(e) {
+    console.log("No se pudo verificar estado de mantenimiento.");
+  }
+}
+
+async function toggleMantenimiento() {
+  const password = prompt("🔐 Ingrese la contraseña para activar/desactivar el mantenimiento global:");
+  if (!password) return;
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify({ tipo_post: "toggle_mantenimiento", password: password })
+    });
+    // Esperar un momento y luego verificar el estado real en el servidor
+    setTimeout(async () => {
+      await verificarMantenimiento();
+    }, 1200);
+  } catch(e) {
+    alert("❌ Error de conexión al servidor.");
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem('mantenimiento_activo') === 'true') {
-    document.getElementById('pantalla-mantenimiento').style.display = 'flex';
-  }
+  verificarMantenimiento();
 });
 
 // --- SEGURIDAD Y VISTAS ---
@@ -261,7 +293,12 @@ async function inicializarBaseDatos() {
   try {
     const response = await fetch(SCRIPT_URL);
     if(!response.ok) throw new Error("Error de Red");
-    baseDatosAlumnos = await response.json();
+    const data = await response.json();
+    if (data && data.error === "mantenimiento") {
+      aplicarEstadoMantenimiento(true);
+      return;
+    }
+    baseDatosAlumnos = data;
     baseDatosAlumnos.sort((a, b) => a.nombre.localeCompare(b.nombre));
     cargarAlumnos();
   } catch (error) {
